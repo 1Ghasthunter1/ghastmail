@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 @font-face {
   font-family: "W95F";
   src: url("./assets/w95f.woff2") format("woff2");
@@ -6,30 +8,42 @@
   font-display: swap;
 }
 
-:root {
-  font-family: "W95F", Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+/* Design tokens exposed as Tailwind utilities (font-w95, bg-silver, etc.). */
+@theme {
+  --font-w95: "W95F", Inter, Avenir, Helvetica, Arial, sans-serif;
+  --color-silver: #c0c0c0;
+  --color-w95-light: #dfdfdf;
+  --color-w95-gray: #808080;
 }
 
-.container {
-  margin: 0;
-  min-height: 100vh;
+/* Windows 95 bevels, used by the Button component. */
+@utility bevel-raised {
+  box-shadow:
+    inset -1px -1px 0 #000000,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #dfdfdf;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+@utility bevel-sunken {
+  box-shadow:
+    inset 1px 1px 0 #000000,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #dfdfdf;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    background-color: var(--color-silver);
+    color: #0f0f0f;
+    font-family: var(--font-w95);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
   }
 }
