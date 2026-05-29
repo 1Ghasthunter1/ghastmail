@@ -3,7 +3,18 @@ import { useNavigate } from "react-router-dom";
 import Button from "../common/elements/button";
 import Input from "../common/elements/input";
 import { NavBar, NavItem } from "../common/elements/navbar";
-import { icons, iconLabels, iconNames, type IconName } from "../common/elements/icons";
+import TitleBar from "../common/elements/titlebar";
+import Dialog from "../common/elements/dialog";
+import Alert from "../common/elements/alert";
+import {
+  icons,
+  iconLabels,
+  iconNames,
+  Window,
+  Help,
+  Trash,
+  type IconName,
+} from "../common/elements/icons";
 
 /** Dev-only kitchen sink for the Win95 UI elements. Not wired into the app. */
 
@@ -36,6 +47,9 @@ function Elements() {
   const [selectedFolder, setSelectedFolder] = useState("Inbox");
   const [text, setText] = useState("");
   const [account, setAccount] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <div className="flex flex-1 flex-col gap-10 p-8">
@@ -115,6 +129,98 @@ function Elements() {
             defaultValue="Disabled field"
           />
         </div>
+      </Section>
+
+      <Section title="Title bar">
+        <div className="flex flex-col gap-3">
+          <TitleBar
+            className="w-80"
+            title="Active window"
+            icon={<Window size={16} />}
+          />
+          <TitleBar
+            className="w-80"
+            title="Inactive window"
+            icon={<Window size={16} />}
+            active={false}
+          />
+          <TitleBar
+            className="w-80"
+            title="Close only"
+            icon={<Window size={16} />}
+            controls={["close"]}
+          />
+        </div>
+      </Section>
+
+      <Section title="Dialog">
+        <p className="m-0 text-sm opacity-70">
+          A general window — title bar, body, optional button footer. Shown
+          inline here; pass <code>modal</code> for the centered overlay.
+        </p>
+        <Dialog
+          modal={false}
+          title="Account properties"
+          icon={<Window size={16} />}
+          controls={["minimize", "maximize", "close"]}
+          className="w-96"
+          footer={
+            <>
+              <Button>OK</Button>
+              <Button>Cancel</Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            <p className="m-0">Display name</p>
+            <Input className="w-full" defaultValue="Hunter Pruett" />
+          </div>
+        </Dialog>
+        <Button className="self-start" onClick={() => setDialogOpen(true)}>
+          Open modal dialog
+        </Button>
+        <Dialog
+          open={dialogOpen}
+          title="Modal dialog"
+          icon={<Window size={16} />}
+          onClose={() => setDialogOpen(false)}
+          footer={<Button onClick={() => setDialogOpen(false)}>Close</Button>}
+        >
+          <p className="m-0">
+            Click the close box or the area outside this window to dismiss it.
+          </p>
+        </Dialog>
+      </Section>
+
+      <Section title="Alert">
+        <div className="flex flex-wrap items-start gap-6">
+          <Button onClick={() => setAlertOpen(true)}>Show notice</Button>
+          <Button onClick={() => setConfirmOpen(true)}>Show confirm</Button>
+        </div>
+        <Alert
+          open={alertOpen}
+          title="GhastMailer"
+          icon={<Help size={32} />}
+          onClose={() => setAlertOpen(false)}
+        >
+          Your changes have been saved.
+        </Alert>
+        <Alert
+          open={confirmOpen}
+          title="Confirm delete"
+          icon={<Trash size={32} />}
+          onClose={() => setConfirmOpen(false)}
+          actions={[
+            {
+              label: "Delete",
+              primary: true,
+              onClick: () => setConfirmOpen(false),
+            },
+            { label: "Cancel", onClick: () => setConfirmOpen(false) },
+          ]}
+        >
+          Are you sure you want to delete this account? This can't be undone.
+        </Alert>
       </Section>
 
       <Section title="Icons">

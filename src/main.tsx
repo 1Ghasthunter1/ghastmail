@@ -5,7 +5,6 @@ import App from "./App";
 import Home from "./pages/Home";
 import Settings from "./pages/Settings";
 import Elements from "./pages/Elements";
-import PickProvider from "./pages/PickProvider";
 
 // Hash routing: URLs look like `…/index.html#/settings`, which survives
 // reloads in Tauri's webview (no server to fall back to index.html).
@@ -16,7 +15,6 @@ const router = createHashRouter([
     children: [
       { index: true, element: <Home /> },
       { path: "settings", element: <Settings /> },
-      { path: "add-account", element: <PickProvider /> },
       { path: "elements", element: <Elements /> },
     ],
   },
