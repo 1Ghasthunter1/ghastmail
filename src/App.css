@@ -14,6 +14,7 @@
   --color-silver: #c0c0c0;
   --color-w95-light: #dfdfdf;
   --color-w95-gray: #808080;
+  --color-navy: #000080;
 }
 
 /* Windows 95 bevels, used by the Button component. */
@@ -30,6 +31,15 @@
     inset 1px 1px 0 #000000,
     inset -1px -1px 0 #ffffff,
     inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #dfdfdf;
+}
+
+/* Sunken inset for text inputs / fields (dark top-left, light bottom-right). */
+@utility bevel-field {
+  box-shadow:
+    inset 1px 1px 0 #808080,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #000000,
     inset -2px -2px 0 #dfdfdf;
 }
 
