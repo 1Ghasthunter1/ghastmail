@@ -121,7 +121,6 @@ function MailClient({
         >
           Compose
         </Button>
-        <Button onClick={onAddAccount}>Add Account</Button>
       </div>
 
       {/* Body: folder sidebar + message pane. */}

@@ -11,8 +11,6 @@ import {
   iconLabels,
   iconNames,
   Window,
-  Help,
-  Trash,
   type IconName,
 } from "../common/elements/icons";
 
@@ -200,7 +198,7 @@ function Elements() {
         <Alert
           open={alertOpen}
           title="GhastMailer"
-          icon={<Help size={32} />}
+          icon="help"
           onClose={() => setAlertOpen(false)}
         >
           Your changes have been saved.
@@ -208,7 +206,7 @@ function Elements() {
         <Alert
           open={confirmOpen}
           title="Confirm delete"
-          icon={<Trash size={32} />}
+          icon="trash"
           onClose={() => setConfirmOpen(false)}
           actions={[
             {

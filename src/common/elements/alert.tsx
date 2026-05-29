@@ -2,6 +2,7 @@ import clsx from "clsx";
 import type { ReactNode } from "react";
 import Dialog from "./dialog";
 import Button from "./button";
+import { icons, type IconName } from "./icons";
 
 /**
  * Windows 95-style alert.
@@ -24,8 +25,8 @@ interface AlertProps {
   open?: boolean;
   /** Title bar text. */
   title?: ReactNode;
-  /** Icon shown beside the message (e.g. an info/warning glyph). */
-  icon?: ReactNode;
+  /** Icon shown to the left of the message, by registry name (e.g. "help"). */
+  icon?: IconName;
   /** The message body. */
   children: ReactNode;
   /** Buttons to show. Defaults to a single "OK" that closes the alert. */
@@ -53,6 +54,8 @@ function Alert({
       ? actions
       : [{ label: "OK", primary: true, onClick: onClose }];
 
+  const IconComp = icon ? icons[icon] : null;
+
   return (
     <Dialog
       open={open}
@@ -60,10 +63,10 @@ function Alert({
       modal={modal}
       onClose={onClose}
       noEscClose={noEscClose}
-      className={clsx("w-72", className)}
+      className={clsx("w-96", className)}
       bodyClassName="py-5"
       footer={
-        <div className="flex w-full justify-center gap-3">
+        <div className="flex w-full justify-end gap-3">
           {resolved.map((action, i) => (
             <Button
               key={i}
@@ -77,8 +80,12 @@ function Alert({
       }
     >
       <div className="flex items-start gap-4">
-        {icon && <span className="shrink-0">{icon}</span>}
-        <div className="min-w-0 flex-1 leading-snug">{children}</div>
+        {IconComp && (
+          <span className="shrink-0">
+            <IconComp size={32} />
+          </span>
+        )}
+        <div className="min-w-0 flex-1 leading-snug text-sm">{children}</div>
       </div>
     </Dialog>
   );

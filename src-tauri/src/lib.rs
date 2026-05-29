@@ -12,7 +12,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![keyring::set_keychain_key, keyring::get_keychain_key])
+        .invoke_handler(tauri::generate_handler![keyring::set_keychain_key, keyring::get_keychain_key, keyring::check_keychain_key_set, keyring::delete_keychain_key])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
