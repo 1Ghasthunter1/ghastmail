@@ -164,7 +164,7 @@ function AddIntelligenceDialog({
             previewState={canSubmit ? "focused" : undefined}
             onClick={() => setPhase("loading")}
           >
-            Save
+            Connect
           </Button>
         </>
       }
