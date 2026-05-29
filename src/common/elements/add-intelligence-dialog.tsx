@@ -39,8 +39,7 @@ export const INTELLIGENCE_PROVIDERS: {
 }[] = [
   { id: "claude", label: "Claude", icon: "claude" },
   { id: "openai", label: "OpenAI", icon: "openai" },
-  // No brand logo — the loader falls back to GENERIC_PROVIDER_ICON.
-  { id: "openrouter", label: "OpenRouter" },
+  { id: "openrouter", label: "OpenRouter", icon: "openrouter" },
 ];
 
 export function providerLabel(provider: string): string {
@@ -133,11 +132,12 @@ function AddIntelligenceDialog({
   // Step 3b (failure): the connectivity test didn't pass — show the error and
   // let the user fix the key. Nothing was saved.
   if (phase === "error" && provider) {
+    // Aliased to a capitalized binding: JSX tags can't be bracket-indexed.
+    const WarningIcon = icons["warning-exclamation"];
     return (
       <Dialog
         open={open}
         title={`Couldn't reach ${providerLabel(provider)}`}
-        icon={<icons.help size={20} />}
         onClose={close}
         className="w-[28rem]"
         footer={
@@ -149,14 +149,21 @@ function AddIntelligenceDialog({
           </>
         }
       >
-        <div className="flex flex-col gap-2">
-          <p className="m-0">
-            We couldn't verify your {providerLabel(provider)} API key. It wasn't
-            saved.
-          </p>
-          {errorMessage && (
-            <p className="m-0 text-sm opacity-70 break-words">{errorMessage}</p>
-          )}
+        <div className="flex items-start gap-4">
+          <span className="shrink-0">
+            <WarningIcon size={32} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <p className="m-0">
+              We couldn't verify your {providerLabel(provider)} API key. It
+              wasn't saved.
+            </p>
+            {errorMessage && (
+              <p className="m-0 text-sm opacity-70 break-words">
+                {errorMessage}
+              </p>
+            )}
+          </div>
         </div>
       </Dialog>
     );

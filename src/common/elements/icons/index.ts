@@ -26,6 +26,8 @@ export { default as Display } from "./Display";
 export { default as Brain } from "./Brain";
 export { default as Claude } from "./Claude";
 export { default as OpenAI } from "./OpenAI";
+export { default as OpenRouter } from "./OpenRouter";
+export { default as WarningExclamation } from "./WarningExclamation";
 
 import Computer from "./Computer";
 import Browser from "./Browser";
@@ -54,6 +56,8 @@ import Display from "./Display";
 import Brain from "./Brain";
 import Claude from "./Claude";
 import OpenAI from "./OpenAI";
+import OpenRouter from "./OpenRouter";
+import WarningExclamation from "./WarningExclamation";
 
 /** name -> component, for dynamic lookup and the gallery. */
 export const icons = {
@@ -84,6 +88,8 @@ export const icons = {
   "brain": Brain,
   "claude": Claude,
   "openai": OpenAI,
+  "openrouter": OpenRouter,
+  "warning-exclamation": WarningExclamation,
 } as const;
 
 /** name -> human-readable label. */
@@ -115,6 +121,8 @@ export const iconLabels: Record<IconName, string> = {
   "brain": "Brain",
   "claude": "Claude",
   "openai": "OpenAI",
+  "openrouter": "OpenRouter",
+  "warning-exclamation": "Warning",
 };
 
 export type IconName = keyof typeof icons;
