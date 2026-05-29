@@ -13,6 +13,9 @@ import AccountSelect, {
   type AccountSelection,
 } from "../common/elements/account-select";
 import AddAccountDialog from "../common/elements/add-account-dialog";
+import Dialog from "../common/elements/dialog";
+import Divider from "../common/elements/divider";
+import IntelligenceSettings from "../common/elements/intelligence-settings";
 import { ComposeWindow, ComposeDock } from "../common/elements/compose";
 import { NavBar, NavItem } from "../common/elements/navbar";
 import Kbd from "../common/elements/kbd";
@@ -49,6 +52,14 @@ const FOLDERS: { label: string; icon: IconName }[] = [
   { label: "Trash", icon: "trash" },
 ];
 
+const SettingsIcon = icons["settings-gears"];
+
+const SETTINGS_SECTIONS: { id: string; label: string; icon: IconName }[] = [
+  { id: "general", label: "General", icon: "display" },
+  { id: "intelligence", label: "Intelligence", icon: "brain" },
+  { id: "accounts", label: "Accounts", icon: "folder-mail" },
+];
+
 /** The actual mail UI, shown once at least one account exists. */
 function MailClient({
   accounts,
@@ -59,6 +70,8 @@ function MailClient({
 }) {
   const [selection, setSelection] = useState<AccountSelection>(ALL_ACCOUNTS);
   const [folder, setFolder] = useState("Inbox");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState("general");
 
   // Up/down move the folder selection, clamped at the ends.
   const moveFolder = (delta: number) =>
@@ -137,6 +150,17 @@ function MailClient({
             <Kbd keybind="down" />
             <span className="ml-1">Navigate</span>
           </div>
+
+          {/* Settings, pinned to the bottom of the sidebar. */}
+          <NavBar orientation="vertical" className="mt-auto p-1">
+            <NavItem
+              icon={<SettingsIcon size={16} />}
+              label="Settings"
+              selected={settingsOpen}
+              onClick={() => setSettingsOpen(true)}
+              className="justify-start"
+            />
+          </NavBar>
         </div>
 
         <div className="bevel-field flex min-w-0 flex-1 flex-col bg-white">
@@ -161,6 +185,45 @@ function MailClient({
           </div>
         </div>
       </div>
+
+      {/* Near-fullscreen settings window, with margins on all sides. */}
+      <Dialog
+        open={settingsOpen}
+        title="Settings"
+        icon={<SettingsIcon size={16} />}
+        onClose={() => setSettingsOpen(false)}
+        className="h-[calc(100vh-4rem)] w-[calc(100vw-4rem)] max-w-none"
+        bodyClassName="flex min-h-0 gap-3"
+      >
+        {/* Section nav on the left, content on the right. */}
+        <NavBar orientation="vertical" className="w-44 shrink-0 gap-px">
+          {SETTINGS_SECTIONS.map(({ id, label, icon }) => {
+            const SectionIcon = icons[icon];
+            return (
+              <NavItem
+                key={id}
+                icon={<SectionIcon size={16} />}
+                label={label}
+                selected={settingsSection === id}
+                onClick={() => setSettingsSection(id)}
+                className="justify-start"
+              />
+            );
+          })}
+        </NavBar>
+
+        <Divider orientation="vertical" />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {settingsSection === "intelligence" ? (
+            <IntelligenceSettings />
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-center text-w95-gray">
+              <p className="m-0">Nothing here yet.</p>
+            </div>
+          )}
+        </div>
+      </Dialog>
 
       {/* Docked compose drafts, pinned to the bottom-left corner. */}
       <ComposeDock>

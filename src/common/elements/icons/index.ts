@@ -23,6 +23,9 @@ export { default as Mouse } from "./Mouse";
 export { default as Compose } from "./Compose";
 export { default as Windows } from "./Windows";
 export { default as Display } from "./Display";
+export { default as Brain } from "./Brain";
+export { default as Claude } from "./Claude";
+export { default as OpenAI } from "./OpenAI";
 
 import Computer from "./Computer";
 import Browser from "./Browser";
@@ -48,6 +51,9 @@ import Mouse from "./Mouse";
 import Compose from "./Compose";
 import Windows from "./Windows";
 import Display from "./Display";
+import Brain from "./Brain";
+import Claude from "./Claude";
+import OpenAI from "./OpenAI";
 
 /** name -> component, for dynamic lookup and the gallery. */
 export const icons = {
@@ -75,6 +81,9 @@ export const icons = {
   "compose": Compose,
   "windows": Windows,
   "display": Display,
+  "brain": Brain,
+  "claude": Claude,
+  "openai": OpenAI,
 } as const;
 
 /** name -> human-readable label. */
@@ -103,6 +112,9 @@ export const iconLabels: Record<IconName, string> = {
   "compose": "Compose",
   "windows": "Windows",
   "display": "Display settings",
+  "brain": "Brain",
+  "claude": "Claude",
+  "openai": "OpenAI",
 };
 
 export type IconName = keyof typeof icons;
