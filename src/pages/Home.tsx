@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listAccounts,
@@ -9,6 +9,7 @@ import {
 import Button from "../common/elements/button";
 import AccountSelect, { accountLabel } from "../common/elements/account-select";
 import AddAccountDialog from "../common/elements/add-account-dialog";
+import { ComposeWindow, ComposeDock } from "../common/elements/compose";
 import { NavBar, NavItem } from "../common/elements/navbar";
 import { icons, type IconName } from "../common/elements/icons";
 
@@ -32,6 +33,9 @@ function useCreateAccount() {
 
 // --- mail client chrome ------------------------------------------------------
 
+/** Gmail caps docked drafts; we mirror that with two. */
+const MAX_COMPOSE = 2;
+
 const FOLDERS: { label: string; icon: IconName }[] = [
   { label: "Inbox", icon: "folder-mail" },
   { label: "Drafts", icon: "compose" },
@@ -50,6 +54,17 @@ function MailClient({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [folder, setFolder] = useState("Inbox");
 
+  // Open compose drafts, oldest first. Capped at two, Gmail-style. Each gets a
+  // stable id so its draft state survives re-renders / siblings closing.
+  const [composeIds, setComposeIds] = useState<number[]>([]);
+  const nextComposeId = useRef(0);
+  const openCompose = () =>
+    setComposeIds((ids) =>
+      ids.length >= MAX_COMPOSE ? ids : [...ids, nextComposeId.current++],
+    );
+  const closeCompose = (id: number) =>
+    setComposeIds((ids) => ids.filter((x) => x !== id));
+
   // Fall back to the first account until the user picks one (and after the
   // selected one is removed).
   const selected = accounts.find((a) => a.id === selectedId) ?? accounts[0];
@@ -64,7 +79,9 @@ function MailClient({
           onChange={setSelectedId}
         />
         <div className="flex-1" />
-        <Button onClick={() => {}}>Compose</Button>
+        <Button onClick={openCompose} disabled={composeIds.length >= MAX_COMPOSE}>
+          Compose
+        </Button>
         <Button onClick={onAddAccount}>Add Account</Button>
       </div>
 
@@ -101,6 +118,18 @@ function MailClient({
           </div>
         </div>
       </div>
+
+      {/* Docked compose drafts, pinned to the bottom-left corner. */}
+      <ComposeDock>
+        {composeIds.map((id) => (
+          <div key={id} className="pointer-events-auto">
+            <ComposeWindow
+              from={selected.email}
+              onClose={() => closeCompose(id)}
+            />
+          </div>
+        ))}
+      </ComposeDock>
     </div>
   );
 }

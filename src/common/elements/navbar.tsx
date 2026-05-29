@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { ReactNode } from "react";
 
 /**
@@ -8,9 +9,6 @@ import type { ReactNode } from "react";
  * row or column. Bevels come from the `bevel-raised` / `bevel-sunken`
  * utilities in App.css.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 interface NavItemProps {
   icon?: ReactNode;
@@ -35,7 +33,7 @@ function NavItem({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={selected}
-      className={cn(
+      className={clsx(
         "inline-flex items-center gap-2 border-0 bg-silver px-2 py-1 font-w95 text-base leading-none select-none",
         selected ? "bevel-sunken" : "bevel-raised",
         disabled ? "cursor-default text-w95-gray" : "cursor-pointer text-black",
@@ -65,7 +63,7 @@ function NavBar({
 }: NavBarProps) {
   return (
     <div
-      className={cn(
+      className={clsx(
         "flex bg-silver",
         orientation === "vertical" ? "flex-col" : "flex-row",
         className,

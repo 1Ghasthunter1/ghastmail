@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { ReactNode } from "react";
 import TitleBar, { type TitleBarControl } from "./titlebar";
 
@@ -11,9 +12,6 @@ import TitleBar, { type TitleBarControl } from "./titlebar";
  * the element showcase). For the trimmed-down confirm/notice case, use
  * `Alert`, which is built on top of this.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 interface DialogProps {
   /** Controls visibility. Defaults to true so it can be used uncontrolled. */
@@ -52,7 +50,7 @@ function Dialog({
     <div
       role="dialog"
       aria-modal={modal}
-      className={cn(
+      className={clsx(
         "bevel-raised flex w-80 flex-col bg-silver p-[3px] font-w95",
         className,
       )}
@@ -63,7 +61,7 @@ function Dialog({
         controls={controls}
         onClose={onClose}
       />
-      <div className={cn("flex-1 px-3 py-4 text-base text-black", bodyClassName)}>
+      <div className={clsx("flex-1 px-3 py-4 text-base text-black", bodyClassName)}>
         {children}
       </div>
       {footer && (

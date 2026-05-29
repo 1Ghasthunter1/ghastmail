@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useState } from "react";
 import type { ButtonHTMLAttributes } from "react";
 
@@ -9,9 +10,6 @@ import type { ButtonHTMLAttributes } from "react";
  * defined in App.css. The component is stateful: it tracks hover, press, and
  * focus internally with useState and picks the matching classes on each render.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 // Forces a static visual state, ignoring interaction — handy for showcases.
 type PreviewState = "default" | "hover" | "pressed" | "focused";
@@ -45,7 +43,7 @@ function Button({
     ? previewState === "pressed"
     : pressedState && hoveredState && !disabled;
 
-  const classes = cn(
+  const classes = clsx(
     "inline-flex items-center justify-center font-w95 text-base leading-none",
     "min-w-[60px] px-3 py-2 box-border border-0 rounded-none bg-silver select-none",
     active

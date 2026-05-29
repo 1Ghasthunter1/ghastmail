@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import type { Account } from "../../lib/db";
 
@@ -9,9 +10,6 @@ import type { Account } from "../../lib/db";
  * label) so duplicate display names stay unambiguous. Used in the mail client
  * toolbar (top-left).
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 /** Pixel-style downward chevron (matches the one in `Input`). */
 function Chevron({ className }: { className?: string }) {
@@ -58,7 +56,7 @@ function AccountSelect({ accounts, value, onChange, className }: AccountSelectPr
   const selected = accounts.find((a) => a.id === value) ?? null;
 
   return (
-    <div ref={containerRef} className={cn("relative font-w95", className)}>
+    <div ref={containerRef} className={clsx("relative font-w95", className)}>
       <button
         type="button"
         aria-haspopup="listbox"
@@ -89,7 +87,7 @@ function AccountSelect({ accounts, value, onChange, className }: AccountSelectPr
                     onChange(account.id);
                     setOpen(false);
                   }}
-                  className={cn(
+                  className={clsx(
                     "group block w-full cursor-pointer px-2 py-1 text-left leading-tight",
                     isSelected
                       ? "bg-navy text-white"
@@ -100,7 +98,7 @@ function AccountSelect({ accounts, value, onChange, className }: AccountSelectPr
                     {accountLabel(account)}
                   </span>
                   <span
-                    className={cn(
+                    className={clsx(
                       "block truncate text-sm",
                       isSelected
                         ? "text-white/80"

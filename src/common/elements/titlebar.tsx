@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
@@ -10,9 +11,6 @@ import type { ReactNode } from "react";
  * like a background window. Used as the chrome for `Dialog` and `Alert`, but
  * exported on its own for any windowed surface.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 export type TitleBarControl = "minimize" | "maximize" | "close";
 
@@ -60,7 +58,7 @@ function ControlButton({
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
       onMouseLeave={() => setPressed(false)}
-      className={cn(
+      className={clsx(
         "flex h-4 w-4 shrink-0 items-center justify-center border-0 bg-silver p-0 text-black",
         active ? "bevel-sunken translate-x-px translate-y-px" : "bevel-raised",
         disabled ? "cursor-default text-w95-gray" : "cursor-pointer",
@@ -102,7 +100,7 @@ function TitleBar({
 
   return (
     <div
-      className={cn(
+      className={clsx(
         "flex select-none items-center gap-1 px-1 py-[3px] font-w95 text-base leading-none",
         active ? "bg-navy text-white" : "bg-silver text-w95-gray",
         className,

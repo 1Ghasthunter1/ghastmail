@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import type { ReactNode } from "react";
 import Dialog from "./dialog";
 import Button from "./button";
@@ -11,9 +12,6 @@ import Button from "./button";
  * the message, and a centered row of action buttons. For anything richer
  * (forms, scrollable content), reach for `Dialog` directly.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 interface AlertAction {
   label: ReactNode;
@@ -58,7 +56,7 @@ function Alert({
       title={title}
       modal={modal}
       onClose={onClose}
-      className={cn("w-72", className)}
+      className={clsx("w-72", className)}
       bodyClassName="py-5"
       footer={
         <div className="flex w-full justify-center gap-3">

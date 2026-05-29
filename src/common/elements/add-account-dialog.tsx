@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import Dialog from "./dialog";
@@ -15,9 +16,6 @@ import googleMail from "../media/mailProviders/google-mail-beta.png";
  *
  * For now Google is the only provider.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 export type Provider = "google";
 
@@ -52,7 +50,7 @@ function ProviderTile({ src, alt, onClick }: ProviderTileProps) {
     <button
       type="button"
       onClick={onClick}
-      className={cn(
+      className={clsx(
         "bevel-raised flex items-center justify-center bg-silver p-3",
         "cursor-pointer border-0 select-none",
         "active:bevel-sunken active:translate-x-px active:translate-y-px",

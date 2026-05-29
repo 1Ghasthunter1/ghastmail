@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 
@@ -9,9 +10,6 @@ import type { InputHTMLAttributes } from "react";
  * Win95-style menu; picking an item fills the field and fires `onValueChange`.
  * Disabled fields render on the silver face with grey text/chevron.
  */
-
-const cn = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
 
 /** Pixel-style downward chevron, drawn crisp to match the bitmap aesthetic. */
 function Chevron({ className }: { className?: string }) {
@@ -76,7 +74,7 @@ function Input({
   return (
     <div
       ref={containerRef}
-      className={cn(
+      className={clsx(
         "bevel-field relative inline-flex items-stretch p-px font-w95",
         disabled ? "bg-silver" : "bg-white",
         containerClassName,
@@ -84,7 +82,7 @@ function Input({
     >
       <input
         disabled={disabled}
-        className={cn(
+        className={clsx(
           "min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-base leading-none outline-none",
           disabled ? "text-w95-gray" : "text-black",
           className,
@@ -108,7 +106,7 @@ function Input({
             onDropdownClick?.();
             if (hasMenu) setOpen((o) => !o);
           }}
-          className={cn(
+          className={clsx(
             "bevel-raised my-px flex w-4 shrink-0 items-center justify-center bg-silver",
             disabled ? "cursor-default" : "cursor-pointer",
           )}
