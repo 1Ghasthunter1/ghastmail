@@ -4,6 +4,7 @@ import Button from "./button";
 import Input from "./input";
 import Loader from "./loader";
 import { icons, type IconName } from "./icons";
+import { testOpenRouterKey } from "../../lib/intelligence";
 
 /**
  * "Add Intelligence" dialog.
@@ -11,20 +12,25 @@ import { icons, type IconName } from "./icons";
  * Steps in one window:
  *   1. Pick an LLM provider (a button per provider).
  *   2. Fill in that provider's required info — just an API key for now.
- *   3. A brief loader, then a success confirmation, both in the same window.
+ *   3. A brief loader, then either a success confirmation or an error, both in
+ *      the same window. For OpenRouter the loader runs a real connectivity test
+ *      against the API; only a passing key gets handed to `onAdd` (and saved).
  *
- * On confirm it hands the provider + entered fields to `onAdd`; the caller
- * persists them.
+ * On a successful connect it hands the provider + entered fields to `onAdd`;
+ * the caller persists them.
  */
 
-/** How long the loader shows before flipping to the success message. */
-const SAVE_DELAY_MS = 100000; // TODO: drop back to 2000 — bumped for debugging.
+/** How long the loader shows before we run the connectivity test. */
+const SAVE_DELAY_MS = 500;
+
+/** Fallback loader icon for providers that ship no logo (e.g. OpenRouter). */
+const GENERIC_PROVIDER_ICON: IconName = "brain";
 
 function providerIcon(provider: IntelligenceProvider): IconName | undefined {
   return INTELLIGENCE_PROVIDERS.find((p) => p.id === provider)?.icon;
 }
 
-export type IntelligenceProvider = "claude" | "openai";
+export type IntelligenceProvider = "claude" | "openai" | "openrouter";
 
 export const INTELLIGENCE_PROVIDERS: {
   id: IntelligenceProvider;
@@ -33,6 +39,8 @@ export const INTELLIGENCE_PROVIDERS: {
 }[] = [
   { id: "claude", label: "Claude", icon: "claude" },
   { id: "openai", label: "OpenAI", icon: "openai" },
+  // No brand logo — the loader falls back to GENERIC_PROVIDER_ICON.
+  { id: "openrouter", label: "OpenRouter" },
 ];
 
 export function providerLabel(provider: string): string {
@@ -58,25 +66,46 @@ function AddIntelligenceDialog({
 }: AddIntelligenceDialogProps) {
   const [provider, setProvider] = useState<IntelligenceProvider | null>(null);
   const [apiKey, setApiKey] = useState("");
-  // "form" while picking/typing, "loading" during the fake save, then "success".
-  const [phase, setPhase] = useState<"form" | "loading" | "success">("form");
+  // "form" while picking/typing, "loading" during the connect/test, then
+  // "success" or "error".
+  const [phase, setPhase] = useState<"form" | "loading" | "success" | "error">(
+    "form",
+  );
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // Hold on the loader for a beat, then commit the save and reveal success.
-  // The commit happens here (not on the Save click) so closing mid-loader
-  // cancels it — the cleanup clears the timer and `onAdd` never fires.
+  // Hold on the loader briefly, then run the connectivity test (OpenRouter
+  // only — other providers keep the no-test behavior). The commit happens here
+  // (not on the Connect click) so closing mid-loader cancels it: the cleanup
+  // flips `cancelled`, so neither `onAdd` nor a phase change fires afterward.
   useEffect(() => {
     if (phase !== "loading" || !provider) return;
-    const id = setTimeout(() => {
-      onAdd?.(provider, apiKey.trim());
-      setPhase("success");
+    let cancelled = false;
+    const key = apiKey.trim();
+    const id = setTimeout(async () => {
+      try {
+        if (provider === "openrouter") {
+          await testOpenRouterKey(key);
+        }
+        if (cancelled) return;
+        onAdd?.(provider, key);
+        setPhase("success");
+      } catch (e) {
+        if (cancelled) return;
+        setErrorMessage(String(e));
+        setPhase("error");
+      }
     }, SAVE_DELAY_MS);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [phase, provider, apiKey, onAdd]);
 
   // Reset to the picker and clear the form, then close.
   function close() {
     setProvider(null);
     setApiKey("");
+    setErrorMessage("");
     setPhase("form");
     onClose?.();
   }
@@ -94,14 +123,46 @@ function AddIntelligenceDialog({
       >
         <Loader
           leftIcon="computer"
-          rightIcon={providerIcon(provider)}
+          rightIcon={providerIcon(provider) ?? GENERIC_PROVIDER_ICON}
           className="w-full"
         />
       </Dialog>
     );
   }
 
-  // Step 3b: saved — confirm success in the same window.
+  // Step 3b (failure): the connectivity test didn't pass — show the error and
+  // let the user fix the key. Nothing was saved.
+  if (phase === "error" && provider) {
+    return (
+      <Dialog
+        open={open}
+        title={`Couldn't reach ${providerLabel(provider)}`}
+        icon={<icons.help size={20} />}
+        onClose={close}
+        className="w-[28rem]"
+        footer={
+          <>
+            <Button previewState="focused" onClick={() => setPhase("form")}>
+              Back
+            </Button>
+            <Button onClick={close}>Close</Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-2">
+          <p className="m-0">
+            We couldn't verify your {providerLabel(provider)} API key. It wasn't
+            saved.
+          </p>
+          {errorMessage && (
+            <p className="m-0 text-sm opacity-70 break-words">{errorMessage}</p>
+          )}
+        </div>
+      </Dialog>
+    );
+  }
+
+  // Step 3c: saved — confirm success in the same window.
   if (phase === "success" && provider) {
     return (
       <Dialog
@@ -180,7 +241,13 @@ function AddIntelligenceDialog({
           <Input
             className="w-full"
             type="password"
-            placeholder={provider === "claude" ? "sk-ant-…" : "sk-…"}
+            placeholder={
+              provider === "claude"
+                ? "sk-ant-…"
+                : provider === "openrouter"
+                  ? "sk-or-v1-…"
+                  : "sk-…"
+            }
             value={apiKey}
             onValueChange={setApiKey}
           />

@@ -15,10 +15,10 @@ export function setKeychainKey(key: string, value: string): Promise<void> {
   return invoke("set_keychain_key", { k: key, v: value });
 }
 
-/** Read a stored secret, or `null` if nothing is stored under `key`. */
-export function getKeychainKey(key: string): Promise<string | null> {
-  return invoke("get_keychain_key", { k: key });
-}
+// NOTE: there is intentionally no "read secret" wrapper. Secrets only flow
+// *into* Rust (save / connectivity test) and never back out to JS — an injected
+// script in a rendered email must not be able to read stored API keys. Rust
+// reads keys from the keychain internally when it needs them.
 
 /** Whether a secret is stored under `key` (without reading the value). */
 export function checkKeychainKeySet(key: string): Promise<boolean> {
