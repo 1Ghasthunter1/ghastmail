@@ -76,11 +76,16 @@ function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/20"
       onClick={onClose}
     >
-      {/* Stop overlay clicks from bubbling out and dismissing the dialog. */}
-      <div onClick={(e) => e.stopPropagation()}>{window}</div>
+      {/* Centers the window when it fits; once it's taller than the viewport
+          the wrapper grows past it, pinning it to the top and letting the
+          overlay scroll. */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        {/* Stop overlay clicks from bubbling out and dismissing the dialog. */}
+        <div onClick={(e) => e.stopPropagation()}>{window}</div>
+      </div>
     </div>
   );
 }

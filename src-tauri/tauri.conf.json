@@ -21,6 +21,11 @@
       "csp": null
     }
   },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:ghastmail.db"]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
