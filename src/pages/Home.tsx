@@ -7,10 +7,16 @@ import {
   type CreateAccountInput,
 } from "../lib/db";
 import Button from "../common/elements/button";
-import AccountSelect, { accountLabel } from "../common/elements/account-select";
+import AccountSelect, {
+  accountLabel,
+  ALL_ACCOUNTS,
+  type AccountSelection,
+} from "../common/elements/account-select";
 import AddAccountDialog from "../common/elements/add-account-dialog";
 import { ComposeWindow, ComposeDock } from "../common/elements/compose";
 import { NavBar, NavItem } from "../common/elements/navbar";
+import Kbd from "../common/elements/kbd";
+import { useKeybind } from "../lib/keybind";
 import { icons, type IconName } from "../common/elements/icons";
 
 // --- data layer (TanStack Query — the app default) --------------------------
@@ -51,8 +57,18 @@ function MailClient({
   accounts: Account[];
   onAddAccount: () => void;
 }) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selection, setSelection] = useState<AccountSelection>(ALL_ACCOUNTS);
   const [folder, setFolder] = useState("Inbox");
+
+  // Up/down move the folder selection, clamped at the ends.
+  const moveFolder = (delta: number) =>
+    setFolder((current) => {
+      const idx = FOLDERS.findIndex((f) => f.label === current);
+      const next = Math.min(Math.max(idx + delta, 0), FOLDERS.length - 1);
+      return FOLDERS[next].label;
+    });
+  useKeybind("up", () => moveFolder(-1));
+  useKeybind("down", () => moveFolder(1));
 
   // Open compose drafts, oldest first. Capped at two, Gmail-style. Each gets a
   // stable id so its draft state survives re-renders / siblings closing.
@@ -65,9 +81,14 @@ function MailClient({
   const closeCompose = (id: number) =>
     setComposeIds((ids) => ids.filter((x) => x !== id));
 
-  // Fall back to the first account until the user picks one (and after the
-  // selected one is removed).
-  const selected = accounts.find((a) => a.id === selectedId) ?? accounts[0];
+  const isAll = selection === ALL_ACCOUNTS;
+  // The single account in focus. In the merged "All accounts" view there is no
+  // one account, so actions that need a concrete sender (compose) fall back to
+  // the first account.
+  const activeAccount = isAll
+    ? null
+    : (accounts.find((a) => a.id === selection) ?? accounts[0]);
+  const composeFrom = (activeAccount ?? accounts[0]).email;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -75,11 +96,16 @@ function MailClient({
       <div className="flex items-center gap-2 bg-silver px-2 py-1">
         <AccountSelect
           accounts={accounts}
-          value={selected.id}
-          onChange={setSelectedId}
+          value={selection}
+          onChange={setSelection}
+          allOption
         />
         <div className="flex-1" />
-        <Button onClick={openCompose} disabled={composeIds.length >= MAX_COMPOSE}>
+        <Button
+          keybind="c"
+          onClick={openCompose}
+          disabled={composeIds.length >= MAX_COMPOSE}
+        >
           Compose
         </Button>
         <Button onClick={onAddAccount}>Add Account</Button>
@@ -87,34 +113,51 @@ function MailClient({
 
       {/* Body: folder sidebar + message pane. */}
       <div className="flex min-h-0 flex-1 gap-1 p-1">
-        <NavBar orientation="vertical" className="w-40 shrink-0 gap-px p-1">
-          {FOLDERS.map(({ label, icon }) => {
-            const FolderIcon = icons[icon];
-            return (
-              <NavItem
-                key={label}
-                icon={<FolderIcon size={16} />}
-                label={label}
-                selected={folder === label}
-                onClick={() => setFolder(label)}
-                className="justify-start"
-              />
-            );
-          })}
-        </NavBar>
+        <div className="flex w-40 shrink-0 flex-col">
+          <NavBar orientation="vertical" className="gap-px p-1">
+            {FOLDERS.map(({ label, icon }) => {
+              const FolderIcon = icons[icon];
+              return (
+                <NavItem
+                  key={label}
+                  icon={<FolderIcon size={16} />}
+                  label={label}
+                  selected={folder === label}
+                  onClick={() => setFolder(label)}
+                  className="justify-start"
+                />
+              );
+            })}
+          </NavBar>
+
+          {/* Keyboard hint: ↑/↓ move between folders. */}
+          <div className="flex items-center justify-center gap-1 px-1 py-2 text-sm text-w95-gray">
+            <Kbd keybind="up" />
+            <span>/</span>
+            <Kbd keybind="down" />
+            <span className="ml-1">Navigate</span>
+          </div>
+        </div>
 
         <div className="bevel-field flex min-w-0 flex-1 flex-col bg-white">
           {/* Pane header: which folder / account you're looking at. */}
           <div className="flex items-baseline justify-between gap-2 border-b border-w95-gray bg-silver px-2 py-1">
             <span className="font-bold">{folder}</span>
             <span className="truncate text-sm text-w95-gray">
-              {accountLabel(selected)} &lt;{selected.email}&gt;
+              {isAll
+                ? `All accounts · ${accounts.length} ${
+                    accounts.length === 1 ? "mailbox" : "mailboxes"
+                  }`
+                : `${accountLabel(activeAccount!)} <${activeAccount!.email}>`}
             </span>
           </div>
 
           {/* No message store yet — empty folder placeholder. */}
           <div className="flex flex-1 items-center justify-center p-6 text-center text-w95-gray">
-            <p className="m-0">No messages in {folder}.</p>
+            <p className="m-0">
+              No messages in {folder}
+              {isAll ? " across your accounts" : ""}.
+            </p>
           </div>
         </div>
       </div>
@@ -124,7 +167,7 @@ function MailClient({
         {composeIds.map((id) => (
           <div key={id} className="pointer-events-auto">
             <ComposeWindow
-              from={selected.email}
+              from={composeFrom}
               onClose={() => closeCompose(id)}
             />
           </div>

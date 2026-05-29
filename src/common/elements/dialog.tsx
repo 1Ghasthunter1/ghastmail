@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import TitleBar, { type TitleBarControl } from "./titlebar";
+import { useKeybind } from "../../lib/keybind";
 
 /**
  * Windows 95-style dialog window.
@@ -26,6 +27,8 @@ interface DialogProps {
   /** Title bar buttons. Defaults to just the close box. */
   controls?: TitleBarControl[];
   onClose?: () => void;
+  /** Disable the built-in Esc-to-close binding. */
+  noEscClose?: boolean;
   /** Classes for the window frame (sizing lives here). */
   className?: string;
   /** Classes for the body wrapper. */
@@ -41,9 +44,17 @@ function Dialog({
   modal = true,
   controls = ["close"],
   onClose,
+  noEscClose = false,
   className,
   bodyClassName,
 }: DialogProps) {
+  // Esc closes the topmost open dialog. allowInInput so it still fires while a
+  // field inside the dialog has focus.
+  useKeybind("escape", () => onClose?.(), {
+    enabled: open && !noEscClose && !!onClose,
+    allowInInput: true,
+  });
+
   if (!open) return null;
 
   const window = (

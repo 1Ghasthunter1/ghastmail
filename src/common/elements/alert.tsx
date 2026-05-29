@@ -32,6 +32,8 @@ interface AlertProps {
   actions?: AlertAction[];
   modal?: boolean;
   onClose?: () => void;
+  /** Disable the built-in Esc-to-close binding. */
+  noEscClose?: boolean;
   className?: string;
 }
 
@@ -43,6 +45,7 @@ function Alert({
   actions,
   modal = true,
   onClose,
+  noEscClose = false,
   className,
 }: AlertProps) {
   const resolved: AlertAction[] =
@@ -56,6 +59,7 @@ function Alert({
       title={title}
       modal={modal}
       onClose={onClose}
+      noEscClose={noEscClose}
       className={clsx("w-72", className)}
       bodyClassName="py-5"
       footer={

@@ -1,6 +1,8 @@
 import clsx from "clsx";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ButtonHTMLAttributes } from "react";
+import { useKeybind } from "../../lib/keybind";
+import Kbd from "./kbd";
 
 /**
  * Windows 95-style button.
@@ -16,12 +18,19 @@ type PreviewState = "default" | "hover" | "pressed" | "focused";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   previewState?: PreviewState;
+  /**
+   * Keyboard shortcut that "clicks" this button from anywhere in the app, e.g.
+   * `"c"`, `"cmd+c"`, `"shift+/"`. Shown as keycaps to the right of the label.
+   * See `src/lib/keybind.ts` for spec syntax and the editable-field rule.
+   */
+  keybind?: string;
 }
 
 function Button({
   children = "Button",
   disabled = false,
   previewState,
+  keybind,
   className,
   onMouseEnter,
   onMouseLeave,
@@ -31,9 +40,24 @@ function Button({
   onBlur,
   ...rest
 }: ButtonProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [hoveredState, setHovered] = useState(false);
   const [pressedState, setPressed] = useState(false);
   const [focusedState, setFocused] = useState(false);
+  // Brief sunken flash so a keyboard-triggered press reads as a real click.
+  const [flashing, setFlashing] = useState(false);
+
+  useKeybind(
+    keybind,
+    () => {
+      const el = buttonRef.current;
+      if (!el) return;
+      setFlashing(true);
+      window.setTimeout(() => setFlashing(false), 120);
+      el.click();
+    },
+    { enabled: !disabled && !previewState },
+  );
 
   // A preview override wins over live interaction state.
   const hovered = previewState ? previewState === "hover" : hoveredState;
@@ -41,10 +65,10 @@ function Button({
 
   const active = previewState
     ? previewState === "pressed"
-    : pressedState && hoveredState && !disabled;
+    : (pressedState && hoveredState && !disabled) || flashing;
 
   const classes = clsx(
-    "inline-flex items-center justify-center font-w95 text-base leading-none",
+    "inline-flex items-center justify-center gap-2 font-w95 text-base leading-none",
     "min-w-[60px] px-3 py-2 box-border border-0 rounded-none bg-silver select-none",
     active
       ? "bevel-sunken translate-x-px translate-y-px"
@@ -61,6 +85,7 @@ function Button({
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       disabled={disabled}
       className={classes}
@@ -91,7 +116,14 @@ function Button({
       }}
       {...rest}
     >
-      {children}
+      {keybind ? (
+        <>
+          <span>{children}</span>
+          <Kbd keybind={keybind} className={disabled ? "opacity-60" : undefined} />
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 }
