@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MessageList from "../components/message-list";
 import MessageView from "../components/message-view";
 import { DUMMY_MESSAGES, type Message, type ReplyKind } from "../../lib/mail";
@@ -25,15 +25,23 @@ interface InboxProps {
   emptyLabel?: string;
   /** Reply / Reply All / Forward from the reader's action bar. */
   onAction: (message: Message, kind: ReplyKind) => void;
+  /** Reports the unread count whenever it changes (opening a row clears one). */
+  onUnreadCountChange?: (count: number) => void;
 }
 
 function Inbox({
   initialMessages = DUMMY_MESSAGES,
   emptyLabel = "No messages here.",
   onAction,
+  onUnreadCountChange,
 }: InboxProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [openId, setOpenId] = useState<number | null>(null);
+
+  const unreadCount = messages.filter((m) => m.unread).length;
+  useEffect(() => {
+    onUnreadCountChange?.(unreadCount);
+  }, [unreadCount, onUnreadCountChange]);
 
   const openMessage = (message: Message) => {
     setOpenId(message.id);

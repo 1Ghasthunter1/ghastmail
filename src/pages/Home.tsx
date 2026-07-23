@@ -73,6 +73,7 @@ function MailClient({
 }) {
   const [selection, setSelection] = useState<AccountSelection>(ALL_ACCOUNTS);
   const [folder, setFolder] = useState("Inbox");
+  const [inboxUnread, setInboxUnread] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState("general");
 
@@ -136,11 +137,21 @@ function MailClient({
           <NavBar orientation="vertical" className="gap-px p-1">
             {FOLDERS.map(({ label, icon }) => {
               const FolderIcon = icons[icon];
+              const unread = label === "Inbox" ? inboxUnread : 0;
               return (
                 <NavItem
                   key={label}
                   icon={<FolderIcon size={16} />}
-                  label={label}
+                  label={
+                    <span className="flex w-full items-center gap-2">
+                      <span className="truncate">{label}</span>
+                      {unread > 0 && (
+                        <span className="ml-auto shrink-0 font-bold">
+                          ({unread})
+                        </span>
+                      )}
+                    </span>
+                  }
                   selected={folder === label}
                   onClick={() => setFolder(label)}
                   className="justify-start"
@@ -175,7 +186,11 @@ function MailClient({
         <div className="bevel-field flex min-w-0 flex-1 flex-col bg-white p-0.5">
           {/* Pane header: which folder / account you're looking at. */}
           <div className="flex items-baseline justify-between gap-2 border-b border-w95-gray bg-silver px-2 py-1">
-            <span className="font-bold">{folder}</span>
+            <span className="font-bold">
+              {folder === "Inbox" && inboxUnread > 0
+                ? `Inbox (${inboxUnread})`
+                : folder}
+            </span>
             <span className="truncate text-sm text-w95-gray">
               {isAll
                 ? `All accounts · ${accounts.length} ${
@@ -196,6 +211,7 @@ function MailClient({
             onAction={(message, kind) =>
               openCompose(buildDraft(message, kind, composeFrom))
             }
+            onUnreadCountChange={folder === "Inbox" ? setInboxUnread : undefined}
           />
         </div>
       </div>

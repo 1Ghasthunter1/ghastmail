@@ -18,9 +18,9 @@ interface MessageViewProps {
   onAction: (kind: ReplyKind) => void;
 }
 
-const ACTIONS: { kind: ReplyKind; label: string }[] = [
-  { kind: "reply", label: "Reply" },
-  { kind: "reply-all", label: "Reply All" },
+const ACTIONS: { kind: ReplyKind; label: string; keybind?: string }[] = [
+  { kind: "reply", label: "Reply", keybind: "r" },
+  { kind: "reply-all", label: "Reply All", keybind: "shift+r" },
   { kind: "forward", label: "Forward" },
 ];
 
@@ -52,8 +52,8 @@ function MessageView({ message, onBack, onAction }: MessageViewProps) {
 
       {/* Action bar, pinned below the scrolling body. */}
       <div className="flex shrink-0 items-center gap-2 border-t border-w95-gray bg-silver px-2 py-1">
-        {ACTIONS.map(({ kind, label }) => (
-          <Button key={kind} onClick={() => onAction(kind)}>
+        {ACTIONS.map(({ kind, label, keybind }) => (
+          <Button key={kind} keybind={keybind} onClick={() => onAction(kind)}>
             {label}
           </Button>
         ))}
