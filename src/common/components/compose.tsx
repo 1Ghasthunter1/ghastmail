@@ -33,6 +33,11 @@ interface ComposeWindowProps {
   initialTo?: string;
   initialSubject?: string;
   initialBody?: string;
+  /**
+   * Field to focus when the window opens. Replies point at the body (To and
+   * Subject are already filled in); a forward points at To.
+   */
+  autoFocusField?: "to" | "body";
 }
 
 function ComposeWindow({
@@ -42,6 +47,7 @@ function ComposeWindow({
   initialTo = "",
   initialSubject = "",
   initialBody = "",
+  autoFocusField,
 }: ComposeWindowProps) {
   const [mode, setMode] = useState<ComposeMode>("normal");
   const [to, setTo] = useState(initialTo);
@@ -103,6 +109,7 @@ function ComposeWindow({
               placeholder="To"
               value={to}
               onValueChange={setTo}
+              autoFocus={autoFocusField === "to"}
             />
             <Input
               className="w-full"
@@ -118,6 +125,7 @@ function ComposeWindow({
               placeholder="Write your message…"
               value={body}
               onChange={(e) => setBody(e.target.value)}
+              autoFocus={autoFocusField === "body"}
             />
           </div>
           <div className="flex items-center gap-2 px-2 pb-2">

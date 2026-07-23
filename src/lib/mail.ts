@@ -139,6 +139,8 @@ export interface Draft {
   to: string;
   subject: string;
   body: string;
+  /** Field the compose window should focus on open. */
+  focus: "to" | "body";
 }
 
 /** Adds `Re: ` / `Fwd: ` unless the subject already carries it. */
@@ -152,26 +154,30 @@ function prefixSubject(prefix: string, subject: string) {
  * Builds the compose prefill for a reader action.
  *
  * `self` is the address of the account in focus — it's dropped from Reply All
- * recipients so you don't mail yourself. Forward leaves `to` empty for the
- * user to fill; every kind quotes the original underneath.
+ * recipients so you don't mail yourself.
+ *
+ * Replies open with an empty body and focus it, so you type straight away.
+ * Forward carries the standard forwarded-message block (the original is the
+ * whole point) and focuses To, the one field it can't fill in. The leading
+ * blank lines leave room to write above the block.
  */
 export function buildDraft(
   message: Message,
   kind: ReplyKind,
   self: string,
 ): Draft {
-  const quoted =
-    `\n\n----- Original message -----\n` +
-    `From: ${message.from} <${message.fromEmail}>\n` +
-    `Date: ${message.time}\n` +
-    `Subject: ${message.subject}\n\n` +
-    message.body;
-
   if (kind === "forward") {
     return {
       to: "",
       subject: prefixSubject("Fwd: ", message.subject),
-      body: quoted,
+      body:
+        `\n\nBegin forwarded message:\n\n` +
+        `From: ${message.from} <${message.fromEmail}>\n` +
+        `Date: ${message.time}\n` +
+        `Subject: ${message.subject}\n` +
+        `To: ${message.to.join(", ")}\n\n` +
+        message.body,
+      focus: "to",
     };
   }
 
@@ -184,6 +190,7 @@ export function buildDraft(
     // Dedupe, and never address the reply back to yourself.
     to: [...new Set(recipients)].filter((a) => a !== self).join(", "),
     subject: prefixSubject("Re: ", message.subject),
-    body: quoted,
+    body: "",
+    focus: "body",
   };
 }

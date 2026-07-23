@@ -251,6 +251,7 @@ function MailClient({
               initialTo={draft?.to}
               initialSubject={draft?.subject}
               initialBody={draft?.body}
+              autoFocusField={draft?.focus}
             />
           </div>
         ))}
