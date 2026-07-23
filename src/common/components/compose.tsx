@@ -1,9 +1,9 @@
 import clsx from "clsx";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import TitleBar from "./titlebar";
-import Button from "./button";
-import Input from "./input";
+import TitleBar from "../elements/titlebar";
+import Button from "../elements/button";
+import Input from "../elements/input";
 import { useKeybind } from "../../lib/keybind";
 
 /**
@@ -26,13 +26,27 @@ interface ComposeWindowProps {
   onClose?: () => void;
   /** Disable the built-in Esc-to-close binding. */
   noEscClose?: boolean;
+  /**
+   * Seed values for a draft opened from an existing message (reply / forward).
+   * Seeds only — the fields are editable and own their state from then on.
+   */
+  initialTo?: string;
+  initialSubject?: string;
+  initialBody?: string;
 }
 
-function ComposeWindow({ from, onClose, noEscClose = false }: ComposeWindowProps) {
+function ComposeWindow({
+  from,
+  onClose,
+  noEscClose = false,
+  initialTo = "",
+  initialSubject = "",
+  initialBody = "",
+}: ComposeWindowProps) {
   const [mode, setMode] = useState<ComposeMode>("normal");
-  const [to, setTo] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [to, setTo] = useState(initialTo);
+  const [subject, setSubject] = useState(initialSubject);
+  const [body, setBody] = useState(initialBody);
 
   // Esc closes the most recently opened compose window, even while a field has
   // focus (you're almost always typing in one).

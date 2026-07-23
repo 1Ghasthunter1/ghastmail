@@ -11,12 +11,15 @@ import AccountSelect, {
   accountLabel,
   ALL_ACCOUNTS,
   type AccountSelection,
-} from "../common/elements/account-select";
-import AddAccountDialog from "../common/elements/add-account-dialog";
+} from "../common/components/account-select";
+import AddAccountDialog from "../common/components/add-account-dialog";
 import Dialog from "../common/elements/dialog";
 import Divider from "../common/elements/divider";
-import IntelligenceSettings from "../common/elements/intelligence-settings";
-import { ComposeWindow, ComposeDock } from "../common/elements/compose";
+import IntelligenceSettings from "../common/components/intelligence-settings";
+import AccountsSettings from "../common/components/accounts-settings";
+import { ComposeWindow, ComposeDock } from "../common/components/compose";
+import Inbox from "../common/layouts/inbox";
+import { buildDraft, type Draft } from "../lib/mail";
 import { NavBar, NavItem } from "../common/elements/navbar";
 import Kbd from "../common/elements/kbd";
 import { useKeybind } from "../lib/keybind";
@@ -85,14 +88,17 @@ function MailClient({
 
   // Open compose drafts, oldest first. Capped at two, Gmail-style. Each gets a
   // stable id so its draft state survives re-renders / siblings closing.
-  const [composeIds, setComposeIds] = useState<number[]>([]);
+  // `draft` is the reply/forward prefill, absent for a blank compose.
+  const [composes, setComposes] = useState<{ id: number; draft?: Draft }[]>([]);
   const nextComposeId = useRef(0);
-  const openCompose = () =>
-    setComposeIds((ids) =>
-      ids.length >= MAX_COMPOSE ? ids : [...ids, nextComposeId.current++],
+  const openCompose = (draft?: Draft) =>
+    setComposes((list) =>
+      list.length >= MAX_COMPOSE
+        ? list
+        : [...list, { id: nextComposeId.current++, draft }],
     );
   const closeCompose = (id: number) =>
-    setComposeIds((ids) => ids.filter((x) => x !== id));
+    setComposes((list) => list.filter((c) => c.id !== id));
 
   const isAll = selection === ALL_ACCOUNTS;
   // The single account in focus. In the merged "All accounts" view there is no
@@ -116,8 +122,9 @@ function MailClient({
         <div className="flex-1" />
         <Button
           keybind="c"
-          onClick={openCompose}
-          disabled={composeIds.length >= MAX_COMPOSE}
+          // Wrapped: a bare reference would pass the click event as the draft.
+          onClick={() => openCompose()}
+          disabled={composes.length >= MAX_COMPOSE}
         >
           Compose
         </Button>
@@ -162,7 +169,10 @@ function MailClient({
           </NavBar>
         </div>
 
-        <div className="bevel-field flex min-w-0 flex-1 flex-col bg-white">
+        {/* `bevel-field` is a 2px inset shadow ring. Inset shadows paint under
+            child elements, so the p-0.5 (2px) keeps full-bleed content — the
+            silver header, the message rows — from covering the bevel. */}
+        <div className="bevel-field flex min-w-0 flex-1 flex-col bg-white p-0.5">
           {/* Pane header: which folder / account you're looking at. */}
           <div className="flex items-baseline justify-between gap-2 border-b border-w95-gray bg-silver px-2 py-1">
             <span className="font-bold">{folder}</span>
@@ -175,23 +185,28 @@ function MailClient({
             </span>
           </div>
 
-          {/* No message store yet — empty folder placeholder. */}
-          <div className="flex flex-1 items-center justify-center p-6 text-center text-w95-gray">
-            <p className="m-0">
-              No messages in {folder}
-              {isAll ? " across your accounts" : ""}.
-            </p>
-          </div>
+          {/* Message list / reader. Only Inbox has placeholder mail for now;
+              keyed on folder so switching folders resets the open message. */}
+          <Inbox
+            key={folder}
+            initialMessages={folder === "Inbox" ? undefined : []}
+            emptyLabel={`No messages in ${folder}${
+              isAll ? " across your accounts" : ""
+            }.`}
+            onAction={(message, kind) =>
+              openCompose(buildDraft(message, kind, composeFrom))
+            }
+          />
         </div>
       </div>
 
-      {/* Near-fullscreen settings window, with margins on all sides. */}
+      {/* Settings window — a touch larger than a standard dialog. */}
       <Dialog
         open={settingsOpen}
         title="Settings"
         icon={<SettingsIcon size={16} />}
         onClose={() => setSettingsOpen(false)}
-        className="h-[calc(100vh-4rem)] w-[calc(100vw-4rem)] max-w-none"
+        className="h-[32rem] w-[44rem] max-w-[calc(100vw-4rem)]"
         bodyClassName="flex min-h-0 gap-3"
       >
         {/* Section nav on the left, content on the right. */}
@@ -216,6 +231,8 @@ function MailClient({
         <div className="flex min-w-0 flex-1 flex-col">
           {settingsSection === "intelligence" ? (
             <IntelligenceSettings />
+          ) : settingsSection === "accounts" ? (
+            <AccountsSettings />
           ) : (
             <div className="flex flex-1 items-center justify-center text-center text-w95-gray">
               <p className="m-0">Nothing here yet.</p>
@@ -226,11 +243,14 @@ function MailClient({
 
       {/* Docked compose drafts, pinned to the bottom-left corner. */}
       <ComposeDock>
-        {composeIds.map((id) => (
+        {composes.map(({ id, draft }) => (
           <div key={id} className="pointer-events-auto">
             <ComposeWindow
               from={composeFrom}
               onClose={() => closeCompose(id)}
+              initialTo={draft?.to}
+              initialSubject={draft?.subject}
+              initialBody={draft?.body}
             />
           </div>
         ))}
@@ -284,8 +304,9 @@ function Home() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         onAdd={(provider, credentials) => {
+          // The dialog shows its own success screen and closes itself; we just
+          // persist the new account in the background.
           createAccountMutation.mutate({ provider, ...credentials });
-          setAddOpen(false);
         }}
       />
     </>

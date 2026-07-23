@@ -5,10 +5,10 @@ import {
   checkKeychainKeySet,
   deleteKeychainKey,
 } from "../../lib/keychain";
-import { icons } from "./icons";
-import Button from "./button";
-import Divider from "./divider";
-import Alert from "./alert";
+import { icons } from "../elements/icons";
+import Button from "../elements/button";
+import Divider from "../elements/divider";
+import Alert from "../elements/alert";
 import AddIntelligenceDialog, {
   INTELLIGENCE_PROVIDERS,
   providerLabel,

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import Dialog from "./dialog";
-import Button from "./button";
-import Input from "./input";
-import Loader from "./loader";
-import { icons, type IconName } from "./icons";
+import Dialog from "../elements/dialog";
+import Button from "../elements/button";
+import Input from "../elements/input";
+import Loader from "../elements/loader";
+import { icons, type IconName } from "../elements/icons";
 import { testOpenRouterKey } from "../../lib/intelligence";
 
 /**
