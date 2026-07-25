@@ -34,5 +34,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0002_add_intelligences.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "gmail_accounts",
+            sql: include_str!("../migrations/0003_gmail_accounts.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

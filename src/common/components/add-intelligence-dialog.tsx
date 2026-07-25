@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Dialog from "../elements/dialog";
 import Button from "../elements/button";
 import Input from "../elements/input";
@@ -72,21 +72,34 @@ function AddIntelligenceDialog({
   );
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Latest `onAdd`/`apiKey` without making them effect dependencies. Callers
+  // pass an inline arrow, so its identity changes on every parent render — and
+  // `onAdd` triggers one. Depending on it would re-arm the timer mid-flight and
+  // commit again every SAVE_DELAY_MS. See the same guard (and the duplicate
+  // accounts it was written for) in `add-account-dialog.tsx`.
+  const onAddRef = useRef(onAdd);
+  onAddRef.current = onAdd;
+  const apiKeyRef = useRef(apiKey);
+  apiKeyRef.current = apiKey;
+
   // Hold on the loader briefly, then run the connectivity test (OpenRouter
   // only — other providers keep the no-test behavior). The commit happens here
   // (not on the Connect click) so closing mid-loader cancels it: the cleanup
   // flips `cancelled`, so neither `onAdd` nor a phase change fires afterward.
+  //
+  // Depends only on the phase transition, so it runs once per entry into
+  // "loading".
   useEffect(() => {
     if (phase !== "loading" || !provider) return;
     let cancelled = false;
-    const key = apiKey.trim();
+    const key = apiKeyRef.current.trim();
     const id = setTimeout(async () => {
       try {
         if (provider === "openrouter") {
           await testOpenRouterKey(key);
         }
         if (cancelled) return;
-        onAdd?.(provider, key);
+        onAddRef.current?.(provider, key);
         setPhase("success");
       } catch (e) {
         if (cancelled) return;
@@ -98,7 +111,7 @@ function AddIntelligenceDialog({
       cancelled = true;
       clearTimeout(id);
     };
-  }, [phase, provider, apiKey, onAdd]);
+  }, [phase, provider]);
 
   // Reset to the picker and clear the form, then close.
   function close() {

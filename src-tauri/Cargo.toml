@@ -28,3 +28,18 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 
+# Gmail account verification (see `src/gmail.rs`).
+#
+# `imap` 2.x has no rustls support; its default `tls` feature pulls native-tls,
+# which on macOS is Security.framework — the system trust store, no C toolchain.
+imap = "2.4.1"
+native-tls = "0.2"
+# `default-features = false` drops lettre's `builder`, so "verification never
+# sends a probe message" is enforced by the type system: `Message` isn't
+# compiled in at all. `tracing` is deliberately left OFF — it logs every SMTP
+# command at debug level, including the base64 `AUTH PLAIN` blob.
+lettre = { version = "0.11", default-features = false, features = [
+    "smtp-transport",
+    "native-tls",
+] }
+

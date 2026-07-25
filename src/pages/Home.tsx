@@ -1,11 +1,6 @@
 import { useRef, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  listAccounts,
-  createAccount,
-  type Account,
-  type CreateAccountInput,
-} from "../lib/db";
+import { type Account } from "../lib/db";
+import { useAccounts, useAddGmailAccount } from "../lib/accounts";
 import Button from "../common/elements/button";
 import AccountSelect, {
   accountLabel,
@@ -24,24 +19,6 @@ import { NavBar, NavItem } from "../common/elements/navbar";
 import Kbd from "../common/elements/kbd";
 import { useKeybind } from "../lib/keybind";
 import { icons, type IconName } from "../common/elements/icons";
-
-// --- data layer (TanStack Query — the app default) --------------------------
-
-const accountKeys = {
-  all: ["accounts"] as const,
-};
-
-function useAccounts() {
-  return useQuery({ queryKey: accountKeys.all, queryFn: listAccounts });
-}
-
-function useCreateAccount() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateAccountInput) => createAccount(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: accountKeys.all }),
-  });
-}
 
 // --- mail client chrome ------------------------------------------------------
 
@@ -121,6 +98,7 @@ function MailClient({
           allOption
         />
         <div className="flex-1" />
+        <Button onClick={onAddAccount}>Add Account</Button>
         <Button
           keybind="c"
           // Wrapped: a bare reference would pass the click event as the draft.
@@ -296,7 +274,7 @@ function EmptyState({ onAddAccount }: { onAddAccount: () => void }) {
 function Home() {
   const [addOpen, setAddOpen] = useState(false);
   const { data: accounts, isPending } = useAccounts();
-  const createAccountMutation = useCreateAccount();
+  const addAccountMutation = useAddGmailAccount();
 
   // Brief boot flash while the db connection opens / migrations run.
   if (isPending) {
@@ -317,14 +295,12 @@ function Home() {
         <EmptyState onAddAccount={() => setAddOpen(true)} />
       )}
 
+      {/* Verification + persistence happen inside the dialog's loader, so a
+          failure lands on its error screen instead of vanishing. */}
       <AddAccountDialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        onAdd={(provider, credentials) => {
-          // The dialog shows its own success screen and closes itself; we just
-          // persist the new account in the background.
-          createAccountMutation.mutate({ provider, ...credentials });
-        }}
+        onSave={(_provider, form) => addAccountMutation.mutateAsync(form)}
       />
     </>
   );
