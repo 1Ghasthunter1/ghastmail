@@ -1,10 +1,15 @@
 import clsx from "clsx";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import TitleBar from "../elements/titlebar";
 import Button from "../elements/button";
 import Input from "../elements/input";
+import Link from "../elements/link";
 import { useKeybind } from "../../lib/keybind";
+import { parseRecipients } from "../../lib/mail";
+import { gmailErrorCopy, isGmailError, sendGmailMessage } from "../../lib/gmail";
+import type { Account } from "../../lib/db";
 
 /**
  * Gmail-style docked compose window.
@@ -20,9 +25,40 @@ import { useKeybind } from "../../lib/keybind";
 
 type ComposeMode = "normal" | "minimized" | "maximized";
 
+/**
+ * Inline send failure, sized for the compose window's action row.
+ *
+ * Deliberately not a dialog: the draft stays visible and editable behind it, so
+ * fixing a typo'd address is one click away.
+ */
+function SendError({ error }: { error: unknown }) {
+  const copy = gmailErrorCopy(error);
+  const raw = isGmailError(error) ? error.raw : null;
+
+  return (
+    <span
+      className="min-w-0 flex-1 truncate text-sm"
+      // The full diagnosis, since the row only has space for one line.
+      title={[copy.headline, copy.secondary, raw].filter(Boolean).join("\n\n")}
+    >
+      {copy.headline}
+      {copy.helpUrl && (
+        <>
+          {" "}
+          <Link href={copy.helpUrl}>{copy.helpLabel}</Link>
+        </>
+      )}
+    </span>
+  );
+}
+
 interface ComposeWindowProps {
-  /** Sender shown in the read-only "From" line. */
-  from?: string;
+  /**
+   * The sending account. Shown in the read-only "From" line, and its
+   * `credentialRef` is what lets Rust find the app password — so without it
+   * Send is disabled.
+   */
+  account?: Account;
   onClose?: () => void;
   /** Disable the built-in Esc-to-close binding. */
   noEscClose?: boolean;
@@ -41,7 +77,7 @@ interface ComposeWindowProps {
 }
 
 function ComposeWindow({
-  from,
+  account,
   onClose,
   noEscClose = false,
   initialTo = "",
@@ -54,12 +90,36 @@ function ComposeWindow({
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
 
+  const from = account?.email;
+
+  // No cache to invalidate — there's no local message store yet — so this is a
+  // plain mutation for its pending/error state.
+  const send = useMutation({
+    mutationFn: () => {
+      if (!account) throw new Error("No account to send from.");
+      return sendGmailMessage({
+        credentialRef: account.credentialRef,
+        from: account.email,
+        to: parseRecipients(to),
+        subject,
+        body,
+      });
+    },
+    // The window closes on success; the draft is gone either way, and there's
+    // no Sent view to return to yet (Gmail files the copy server-side).
+    onSuccess: () => onClose?.(),
+  });
+
   // Esc closes the most recently opened compose window, even while a field has
-  // focus (you're almost always typing in one).
+  // focus (you're almost always typing in one). Blocked mid-send so a stray Esc
+  // can't hide a draft whose delivery hasn't been confirmed.
   useKeybind("escape", () => onClose?.(), {
-    enabled: !noEscClose && !!onClose,
+    enabled: !noEscClose && !!onClose && !send.isPending,
     allowInInput: true,
   });
+
+  const canSend =
+    !!account && parseRecipients(to).length > 0 && !send.isPending;
 
   const title = subject.trim() || "New Message";
   const minimized = mode === "minimized";
@@ -129,9 +189,21 @@ function ComposeWindow({
             />
           </div>
           <div className="flex items-center gap-2 px-2 pb-2">
-            <Button previewState="focused" onClick={onClose}>
-              Send
+            <Button
+              previewState={canSend ? "focused" : undefined}
+              disabled={!canSend}
+              onClick={() => send.mutate()}
+            >
+              {send.isPending ? "Sending…" : "Send"}
             </Button>
+            {send.isPending && (
+              <span className="text-sm text-w95-gray">
+                Contacting smtp.gmail.com…
+              </span>
+            )}
+            {/* Failures keep the draft open with everything typed intact —
+                losing a message to a bad address would be unforgivable. */}
+            {send.isError && !send.isPending && <SendError error={send.error} />}
           </div>
         </>
       )}

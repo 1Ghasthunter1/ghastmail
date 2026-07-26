@@ -34,12 +34,17 @@ tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 # which on macOS is Security.framework — the system trust store, no C toolchain.
 imap = "2.4.1"
 native-tls = "0.2"
-# `default-features = false` drops lettre's `builder`, so "verification never
-# sends a probe message" is enforced by the type system: `Message` isn't
-# compiled in at all. `tracing` is deliberately left OFF — it logs every SMTP
-# command at debug level, including the base64 `AUTH PLAIN` blob.
+# `builder` is only here for actually sending mail (`gmail::send_gmail_message`).
+# Account verification still never constructs a `Message` — it drives
+# `SmtpConnection` straight to AUTH and stops — but that's now a convention the
+# code keeps rather than something the compiler enforces, so don't add a
+# `Message` to the verification path.
+#
+# `tracing` is deliberately left OFF — it logs every SMTP command at debug
+# level, including the base64 `AUTH PLAIN` blob.
 lettre = { version = "0.11", default-features = false, features = [
     "smtp-transport",
     "native-tls",
+    "builder",
 ] }
 

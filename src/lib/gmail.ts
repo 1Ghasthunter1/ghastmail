@@ -16,7 +16,10 @@ export type GmailStage =
   | "imapList"
   | "smtpConnect"
   | "smtpStarttls"
-  | "smtpAuth";
+  | "smtpAuth"
+  | "compose"
+  | "smtpSend"
+  | "keychain";
 
 export type GmailErrorKind =
   | "auth_failed"
@@ -26,6 +29,8 @@ export type GmailErrorKind =
   | "smtp_auth_failed"
   | "rate_limited"
   | "timeout"
+  | "credential_missing"
+  | "invalid_recipient"
   | "unexpected";
 
 export interface GmailError {
@@ -63,6 +68,35 @@ export function verifyGmailAccount(
   password: string,
 ): Promise<GmailVerification> {
   return invoke<GmailVerification>("verify_gmail_account", { email, password });
+}
+
+export interface SendMessageInput {
+  /** The sending account's `credentialRef` — Rust reads the password itself. */
+  credentialRef: string;
+  /** Must be the account's own address; Gmail rejects mismatched senders. */
+  from: string;
+  to: string[];
+  subject: string;
+  body: string;
+}
+
+/**
+ * Send a plain-text message through Gmail's SMTP server.
+ *
+ * Takes a `credentialRef`, not a password: the secret is read from the keychain
+ * in Rust and never enters the webview. Rejects with a `GmailError`.
+ *
+ * Gmail files SMTP-sent mail into the Sent folder itself, so there's nothing
+ * further to do on success.
+ */
+export function sendGmailMessage(input: SendMessageInput): Promise<void> {
+  return invoke("send_gmail_message", {
+    credentialRef: input.credentialRef,
+    from: input.from,
+    to: input.to,
+    subject: input.subject,
+    body: input.body,
+  });
 }
 
 /** Narrow an unknown rejection value to a `GmailError`. */
@@ -158,15 +192,28 @@ export function gmailErrorCopy(err: unknown): GmailErrorCopy {
       };
 
     case "smtp_auth_failed":
-      // The same credential just authenticated over IMAP, so this is usually
-      // transient rather than a wrong password.
-      return {
-        title: "Sending failed",
-        headline: "Reading mail works, but sending failed.",
-        secondary:
-          "Gmail accepted these credentials for IMAP a moment ago, so this is often temporary.",
-        retryable: true,
-      };
+      // Same failure, two very different situations. During setup IMAP had just
+      // accepted the credential seconds earlier, so it's likely transient. While
+      // sending from a saved account, the stored password has probably been
+      // revoked — app passwords are revocable and people revoke them.
+      // `smtpAuth` only occurs during setup; `smtpSend` only when sending.
+      return err.stage === "smtpSend"
+        ? {
+            title: "Sending failed",
+            headline: "Gmail rejected this account's app password.",
+            secondary:
+              "It may have been revoked. Remove the account under Settings → Accounts and add it again with a new app password.",
+            helpUrl: APP_PASSWORD_URL,
+            helpLabel: "Create an app password",
+            retryable: true,
+          }
+        : {
+            title: "Sending failed",
+            headline: "Reading mail works, but sending failed.",
+            secondary:
+              "Gmail accepted these credentials for IMAP a moment ago, so this is often temporary.",
+            retryable: true,
+          };
 
     case "rate_limited":
       return {
@@ -181,6 +228,24 @@ export function gmailErrorCopy(err: unknown): GmailErrorCopy {
         title: "Gmail didn't respond",
         headline: "Gmail didn't respond in time.",
         retryable: true,
+      };
+
+    case "credential_missing":
+      return {
+        title: "App password missing",
+        headline: "This account's app password isn't in your keychain.",
+        secondary:
+          "Remove the account under Settings → Accounts and add it again.",
+        retryable: false,
+      };
+
+    case "invalid_recipient":
+      return {
+        title: "Check the address",
+        // Rust names the offending address, which matters when several were
+        // typed into the To field.
+        headline: err.message,
+        retryable: false,
       };
 
     case "unexpected":

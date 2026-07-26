@@ -1,14 +1,23 @@
-//! Gmail account verification over IMAP + SMTP with an app password.
+//! Gmail over IMAP + SMTP with an app password.
 //!
-//! One command, [`verify_gmail_account`], runs the full probe: connect and sign
-//! in to `imap.gmail.com`, read `CAPABILITY` and the RFC 6154 special-use
-//! folder map, then authenticate against `smtp.gmail.com`. Both halves must
-//! pass — an account that reads fine but silently fails to send is worse than a
-//! clean rejection — and nothing is persisted here. The caller only writes the
-//! password to the keychain once this returns `Ok`.
+//! Two commands:
+//!
+//! - [`verify_gmail_account`] runs the setup probe: connect and sign in to
+//!   `imap.gmail.com`, read `CAPABILITY` and the RFC 6154 special-use folder
+//!   map, then authenticate against `smtp.gmail.com`. Both halves must pass —
+//!   an account that reads fine but silently fails to send is worse than a
+//!   clean rejection — and nothing is persisted here. The caller only writes
+//!   the password to the keychain once this returns `Ok`.
+//! - [`send_gmail_message`] sends a plain-text message from a saved account.
+//!
+//! The difference in how each gets its password is the point. Verification
+//! takes one that the user just typed and has not stored yet. Sending takes a
+//! `credential_ref` and reads the secret out of the keychain here in Rust — the
+//! frontend never holds it, which is what `src/lib/keychain.ts` means by
+//! secrets flowing only inward.
 //!
 //! PASSWORD HYGIENE. The app password lives in a local `String` that is dropped
-//! when the probe ends. It is never a field of a `Debug` type, never
+//! when the call ends. It is never a field of a `Debug` type, never
 //! interpolated into a message we author, and every `raw` string we return
 //! comes from the server or the client library. There are no `println!`/`dbg!`
 //! calls in this module, `imap`'s traffic echo is switched off explicitly, and
@@ -25,9 +34,12 @@ use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::{Duration, Instant};
 
+use lettre::message::header::ContentType;
+use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::{Credentials, Mechanism};
 use lettre::transport::smtp::client::{SmtpConnection, TlsParameters};
 use lettre::transport::smtp::extension::ClientId;
+use lettre::{Message, SmtpTransport, Transport};
 use serde::Serialize;
 
 /// Endpoints are constants because Gmail is the only provider. If Google ever
@@ -97,6 +109,11 @@ pub enum GmailErrorKind {
     RateLimited,
     /// A socket timed out, or the overall budget ran out.
     Timeout,
+    /// The account's app password isn't in the keychain. Someone deleted the
+    /// entry, or the account row outlived it.
+    CredentialMissing,
+    /// A recipient address doesn't parse. Send-only.
+    InvalidRecipient,
     /// Unclassified. `raw` is the only thing the user can act on.
     Unexpected,
 }
@@ -114,6 +131,12 @@ pub enum Stage {
     SmtpConnect,
     SmtpStarttls,
     SmtpAuth,
+    /// Building the message, before anything hits the wire.
+    Compose,
+    /// Handing the composed message to Gmail.
+    SmtpSend,
+    /// Reading the app password back out of the OS keychain.
+    Keychain,
 }
 
 #[derive(Debug, Serialize)]
@@ -155,6 +178,10 @@ fn headline(kind: GmailErrorKind) -> &'static str {
             "Gmail is temporarily limiting connections. Try again in a few minutes."
         }
         GmailErrorKind::Timeout => "Gmail didn't respond in time.",
+        GmailErrorKind::CredentialMissing => {
+            "This account's app password is missing from your keychain."
+        }
+        GmailErrorKind::InvalidRecipient => "That doesn't look like a valid email address.",
         GmailErrorKind::Unexpected => "Something went wrong while connecting to Gmail.",
     }
 }
@@ -537,4 +564,111 @@ fn classify_smtp(stage: Stage, e: &lettre::transport::smtp::Error) -> GmailError
     };
 
     GmailError::new(kind, stage, Some(raw))
+}
+
+// --- sending -----------------------------------------------------------------
+
+/// Send a plain-text message from one of the user's Gmail accounts.
+///
+/// The app password is read from the keychain *here*, in Rust, using the
+/// account's `credential_ref`. It is never handed to the frontend — that's the
+/// same policy `src/lib/keychain.ts` describes, and it's why this takes a
+/// reference rather than a secret.
+///
+/// Gmail copies anything sent through its SMTP server into the account's Sent
+/// folder automatically, so there's no IMAP `APPEND` to do afterwards.
+#[tauri::command]
+pub async fn send_gmail_message(
+    credential_ref: String,
+    from: String,
+    to: Vec<String>,
+    subject: String,
+    body: String,
+) -> Result<(), GmailError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        send_blocking(credential_ref, from, to, subject, body)
+    })
+    .await
+    .unwrap_or_else(|e| {
+        Err(GmailError::new(
+            GmailErrorKind::Unexpected,
+            Stage::SmtpSend,
+            Some(e.to_string()),
+        ))
+    })
+}
+
+fn send_blocking(
+    credential_ref: String,
+    from: String,
+    to: Vec<String>,
+    subject: String,
+    body: String,
+) -> Result<(), GmailError> {
+    if to.is_empty() {
+        return Err(GmailError::new(
+            GmailErrorKind::InvalidRecipient,
+            Stage::Compose,
+            Some("no recipients".to_string()),
+        ));
+    }
+
+    // Build the message first. Address parsing is the likeliest failure and the
+    // cheapest to detect, so a typo costs neither a keychain read nor a socket.
+    let mut builder = Message::builder()
+        .from(parse_mailbox(&from)?)
+        .subject(subject);
+    for recipient in &to {
+        builder = builder.to(parse_mailbox(recipient)?);
+    }
+
+    let message = builder
+        .header(ContentType::TEXT_PLAIN)
+        .body(body)
+        .map_err(|e| {
+            GmailError::new(
+                GmailErrorKind::Unexpected,
+                Stage::Compose,
+                Some(e.to_string()),
+            )
+        })?;
+
+    let password = crate::keyring::read_secret(&format!("account:{credential_ref}"))
+        .map_err(|e| GmailError::new(GmailErrorKind::Unexpected, Stage::Keychain, Some(e)))?
+        .ok_or_else(|| {
+            GmailError::new(
+                GmailErrorKind::CredentialMissing,
+                Stage::Keychain,
+                Some(format!("no keychain entry for account:{credential_ref}")),
+            )
+        })?;
+
+    let creds = Credentials::new(from, password);
+    let mailer = SmtpTransport::starttls_relay(SMTP_HOST)
+        .map_err(|e| classify_smtp(Stage::SmtpConnect, &e))?
+        .port(SMTP_PORT_STARTTLS)
+        .credentials(creds)
+        .authentication(vec![Mechanism::Plain])
+        .hello_name(ClientId::Domain(EHLO_NAME.to_string()))
+        .timeout(Some(OP_TIMEOUT))
+        .build();
+
+    mailer
+        .send(&message)
+        .map_err(|e| classify_smtp(Stage::SmtpSend, &e))?;
+
+    Ok(())
+}
+
+/// Parse one address, mapping a failure to something the compose window can show.
+///
+/// The raw string is echoed back so the user can see *which* recipient was
+/// rejected — with several in the To field, "invalid address" alone is useless.
+fn parse_mailbox(address: &str) -> Result<Mailbox, GmailError> {
+    address.trim().parse::<Mailbox>().map_err(|e| GmailError {
+        kind: GmailErrorKind::InvalidRecipient,
+        stage: Stage::Compose,
+        message: format!("\"{}\" isn't a valid email address.", address.trim()),
+        raw: Some(e.to_string()),
+    })
 }

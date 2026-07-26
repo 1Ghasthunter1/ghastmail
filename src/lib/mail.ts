@@ -194,3 +194,17 @@ export function buildDraft(
     focus: "body",
   };
 }
+
+/**
+ * Split a typed "To" field into individual addresses.
+ *
+ * Accepts the separators people actually use — commas, semicolons, and
+ * newlines — and drops empty segments so a trailing comma isn't an error.
+ * Validation is left to Rust, which reports *which* address was rejected.
+ */
+export function parseRecipients(value: string): string[] {
+  return value
+    .split(/[,;\n]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}

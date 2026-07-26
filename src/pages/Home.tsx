@@ -85,7 +85,7 @@ function MailClient({
   const activeAccount = isAll
     ? null
     : (accounts.find((a) => a.id === selection) ?? accounts[0]);
-  const composeFrom = (activeAccount ?? accounts[0]).email;
+  const composeAccount = activeAccount ?? accounts[0];
 
   return (
     <div className="flex flex-1 flex-col">
@@ -187,7 +187,7 @@ function MailClient({
               isAll ? " across your accounts" : ""
             }.`}
             onAction={(message, kind) =>
-              openCompose(buildDraft(message, kind, composeFrom))
+              openCompose(buildDraft(message, kind, composeAccount.email))
             }
             onUnreadCountChange={folder === "Inbox" ? setInboxUnread : undefined}
           />
@@ -240,7 +240,7 @@ function MailClient({
         {composes.map(({ id, draft }) => (
           <div key={id} className="pointer-events-auto">
             <ComposeWindow
-              from={composeFrom}
+              account={composeAccount}
               onClose={() => closeCompose(id)}
               initialTo={draft?.to}
               initialSubject={draft?.subject}

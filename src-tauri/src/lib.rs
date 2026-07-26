@@ -20,7 +20,8 @@ pub fn run() {
             keyring::check_keychain_key_set,
             keyring::delete_keychain_key,
             intelligence::test_openrouter_key,
-            gmail::verify_gmail_account
+            gmail::verify_gmail_account,
+            gmail::send_gmail_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
